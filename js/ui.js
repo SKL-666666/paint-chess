@@ -53,53 +53,53 @@
   // ===== 预设函数：每个 4 参数（h,k 控制平移 + 2 形状参数），支持显函数与参数化隐函数 =====
   // build(vals) -> {kind:'explicit', expr} 或 {kind:'param', xExpr, yExpr, tMin, tMax, label}
   function P(name, min, max, step, def) { return { name, min, max, step, def }; }
-  const HI = P('h', -4, 4, 0.1, 0);   // 水平平移
-  const KI = P('k', -4, 4, 0.1, 0);   // 垂直平移
+  const HI = P('h', -10, 10, 0.1, 0);   // 水平平移
+  const KI = P('k', -10, 10, 0.1, 0);   // 垂直平移
   const PI2 = 6.2832;
   const PRESETS = [
     // === 显函数 ===
-    { name: '直线 y=a(x-h)+b+k', params:[P('a',-4,4,0.1,1),P('b',-4,4,0.1,0),HI,KI],
+    { name: '直线 y=a(x-h)+b+k', params:[P('a',-10,10,0.1,1),P('b',-10,10,0.1,0),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*(x-'+fmt(v.h)+')+'+fmt(v.b)+'+'+fmt(v.k)}; } },
-    { name: '二次 y=a(x-h)²+b(x-h)+k', params:[P('a',-2,2,0.05,0.5),P('b',-4,4,0.1,0),HI,KI],
+    { name: '二次 y=a(x-h)²+b(x-h)+k', params:[P('a',-5,5,0.05,0.5),P('b',-10,10,0.1,0),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*(x-'+fmt(v.h)+')^2+'+fmt(v.b)+'*(x-'+fmt(v.h)+')+'+fmt(v.k)}; } },
-    { name: '三次 y=a(x-h)³+b(x-h)+k', params:[P('a',-0.5,0.5,0.02,0.2),P('b',-3,3,0.1,0),HI,KI],
+    { name: '三次 y=a(x-h)³+b(x-h)+k', params:[P('a',-2,2,0.02,0.2),P('b',-8,8,0.1,0),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*(x-'+fmt(v.h)+')^3+'+fmt(v.b)+'*(x-'+fmt(v.h)+')+'+fmt(v.k)}; } },
-    { name: '四次 y=a(x-h)⁴+b(x-h)²+k', params:[P('a',-0.2,0.2,0.005,0.1),P('b',-2,2,0.05,0),HI,KI],
+    { name: '四次 y=a(x-h)⁴+b(x-h)²+k', params:[P('a',-1,1,0.005,0.1),P('b',-5,5,0.05,0),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*(x-'+fmt(v.h)+')^4+'+fmt(v.b)+'*(x-'+fmt(v.h)+')^2+'+fmt(v.k)}; } },
-    { name: '反比例 y=a/(b(x-h))+k', params:[P('a',-4,4,0.1,1),P('b',-3,3,0.1,1),HI,KI],
+    { name: '反比例 y=a/(b(x-h))+k', params:[P('a',-10,10,0.1,1),P('b',-8,8,0.1,1),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'/('+fmt(v.b)+'*(x-'+fmt(v.h)+'))+'+fmt(v.k)}; } },
-    { name: '正弦 y=a·sin(b(x-h))+k', params:[P('a',-4,4,0.1,1),P('b',-3,3,0.1,1),HI,KI],
+    { name: '正弦 y=a·sin(b(x-h))+k', params:[P('a',-10,10,0.1,1),P('b',-8,8,0.1,1),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*sin('+fmt(v.b)+'*(x-'+fmt(v.h)+'))+'+fmt(v.k)}; } },
-    { name: '余弦 y=a·cos(b(x-h))+k', params:[P('a',-4,4,0.1,1),P('b',-3,3,0.1,1),HI,KI],
+    { name: '余弦 y=a·cos(b(x-h))+k', params:[P('a',-10,10,0.1,1),P('b',-8,8,0.1,1),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*cos('+fmt(v.b)+'*(x-'+fmt(v.h)+'))+'+fmt(v.k)}; } },
-    { name: '正切 y=a·tan(b(x-h))+k', params:[P('a',-3,3,0.1,1),P('b',-2,2,0.05,0.5),HI,KI],
+    { name: '正切 y=a·tan(b(x-h))+k', params:[P('a',-8,8,0.1,1),P('b',-5,5,0.05,0.5),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*tan('+fmt(v.b)+'*(x-'+fmt(v.h)+'))+'+fmt(v.k)}; } },
-    { name: '绝对值 y=a|b(x-h)|+k', params:[P('a',-3,3,0.1,1),P('b',-3,3,0.1,1),HI,KI],
+    { name: '绝对值 y=a|b(x-h)|+k', params:[P('a',-8,8,0.1,1),P('b',-8,8,0.1,1),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*abs('+fmt(v.b)+'*(x-'+fmt(v.h)+'))+'+fmt(v.k)}; } },
-    { name: '平方根 y=a√(b(x-h))+k', params:[P('a',-3,3,0.1,1),P('b',0.2,3,0.1,1),HI,KI],
+    { name: '平方根 y=a√(b(x-h))+k', params:[P('a',-8,8,0.1,1),P('b',0.1,8,0.1,1),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*sqrt('+fmt(v.b)+'*(x-'+fmt(v.h)+'))+'+fmt(v.k)}; } },
-    { name: '指数 y=a·exp(b(x-h))+k', params:[P('a',-2,2,0.05,1),P('b',-1.5,1.5,0.05,0.5),HI,KI],
+    { name: '指数 y=a·exp(b(x-h))+k', params:[P('a',-5,5,0.05,1),P('b',-3,3,0.05,0.5),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*exp('+fmt(v.b)+'*(x-'+fmt(v.h)+'))+'+fmt(v.k)}; } },
-    { name: '对数 y=a·ln|b(x-h)|+k', params:[P('a',-3,3,0.1,1),P('b',0.2,3,0.1,1),HI,KI],
+    { name: '对数 y=a·ln|b(x-h)|+k', params:[P('a',-8,8,0.1,1),P('b',0.1,8,0.1,1),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*log(abs('+fmt(v.b)+'*(x-'+fmt(v.h)+')))+'+fmt(v.k)}; } },
-    { name: '双曲 y=a·tanh(b(x-h))+k', params:[P('a',-4,4,0.1,2),P('b',-2,2,0.1,1),HI,KI],
+    { name: '双曲 y=a·tanh(b(x-h))+k', params:[P('a',-10,10,0.1,2),P('b',-5,5,0.1,1),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*tanh('+fmt(v.b)+'*(x-'+fmt(v.h)+'))+'+fmt(v.k)}; } },
-    { name: '高斯 y=a·exp(-b(x-h)²)+k', params:[P('a',-3,3,0.1,2),P('b',0.05,2,0.05,0.5),HI,KI],
+    { name: '高斯 y=a·exp(-b(x-h)²)+k', params:[P('a',-8,8,0.1,2),P('b',0.02,5,0.05,0.5),HI,KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*exp(-'+fmt(v.b)+'*(x-'+fmt(v.h)+')^2)+'+fmt(v.k)}; } },
-    { name: '正弦+余弦叠加', params:[P('a',-3,3,0.1,1),P('b',-3,3,0.1,0.5),P('c',0.2,3,0.1,1.5),KI],
+    { name: '正弦+余弦叠加', params:[P('a',-8,8,0.1,1),P('b',-8,8,0.1,0.5),P('c',0.1,8,0.1,1.5),KI],
       build(v){ return {kind:'explicit', expr:'y='+fmt(v.a)+'*sin(x)+'+fmt(v.b)+'*cos('+fmt(v.c)+'*x)+'+fmt(v.k)}; } },
     { name: '垂直线 x=h', params:[HI,P('_',-1,1,1,0),P('_',-1,1,1,0),P('_',-1,1,1,0)],
       build(v){ return {kind:'explicit', expr:'x='+fmt(v.h)}; } },
     // === 参数化隐函数 ===
-    { name: '椭圆 (x-h)²/a²+(y-k)²/b²=1', params:[P('a',0.5,4,0.1,2),P('b',0.5,4,0.1,2),HI,KI],
+    { name: '椭圆 (x-h)²/a²+(y-k)²/b²=1', params:[P('a',0.3,10,0.1,2),P('b',0.3,10,0.1,2),HI,KI],
       build(v){ return {kind:'param', xExpr:fmt(v.h)+'+'+fmt(v.a)+'*cos(t)', yExpr:fmt(v.k)+'+'+fmt(v.b)+'*sin(t)', tMin:0, tMax:PI2, label:'椭圆'}; } },
-    { name: '玫瑰线 r=a·cos(b·t)', params:[P('a',0.5,4,0.1,2),P('b',1,5,1,2),HI,KI],
+    { name: '玫瑰线 r=a·cos(b·t)', params:[P('a',0.3,10,0.1,2),P('b',1,8,1,2),HI,KI],
       build(v){ return {kind:'param', xExpr:fmt(v.h)+'+'+fmt(v.a)+'*cos('+fmt(v.b)+'*t)*cos(t)', yExpr:fmt(v.k)+'+'+fmt(v.a)+'*cos('+fmt(v.b)+'*t)*sin(t)', tMin:0, tMax:PI2, label:'玫瑰线'}; } },
-    { name: '螺旋线', params:[P('a',0.1,0.8,0.05,0.3),P('b',1,4,0.5,2),HI,KI],
+    { name: '螺旋线', params:[P('a',0.05,2,0.05,0.3),P('b',0.5,8,0.5,2),HI,KI],
       build(v){ return {kind:'param', xExpr:fmt(v.h)+'+'+fmt(v.a)+'*t*cos('+fmt(v.b)+'*t)', yExpr:fmt(v.k)+'+'+fmt(v.a)+'*t*sin('+fmt(v.b)+'*t)', tMin:0, tMax:12.566, label:'螺旋线'}; } },
-    { name: '心形线', params:[P('a',0.3,2,0.1,1),P('b',0.3,2,0.1,1),HI,KI],
+    { name: '心形线', params:[P('a',0.1,5,0.1,1),P('b',0.1,5,0.1,1),HI,KI],
       build(v){ return {kind:'param', xExpr:fmt(v.h)+'+'+fmt(v.a)+'*(2*cos(t)-cos(2*t))', yExpr:fmt(v.k)+'+'+fmt(v.b)+'*(2*sin(t)-sin(2*t))', tMin:0, tMax:PI2, label:'心形线'}; } },
-    { name: '双纽线 (x²+y²)²=a²(x²-y²)', params:[P('a',1,4,0.1,2),P('_',-1,1,1,0),HI,KI],
+    { name: '双纽线 (x²+y²)²=a²(x²-y²)', params:[P('a',0.5,10,0.1,2),P('_',-1,1,1,0),HI,KI],
       build(v){ const a2=v.a*v.a; return {kind:'param', xExpr:fmt(v.h)+'+sqrt('+fmt(a2)+'*cos(2*t))*cos(t)', yExpr:fmt(v.k)+'+sqrt('+fmt(a2)+'*cos(2*t))*sin(t)', tMin:-0.785, tMax:3.927, label:'双纽线'}; } },
   ];
   function fmt(v){ return Math.abs(v)<1e-9?'0':(Math.round(v*1000)/1000).toString(); }
@@ -141,29 +141,33 @@
       el.addEventListener('click', () => selectPreset(idx));
       list.appendChild(el);
     });
-    if (activePresetIdx >= 0) {
-      const p = PRESETS[activePresetIdx];
-      // 过滤占位参数 _
-      const realParams = p.params.filter(prm => prm.name !== '_');
-      if (realParams.length) {
-        const ctrl = document.createElement('div');
-        ctrl.className = 'preset-controls';
-        for (const prm of realParams) {
-          const val = presetValues[activePresetIdx][prm.name];
-          const row = document.createElement('div');
-          row.className = 'slider-row';
-          row.innerHTML = `<label>${prm.name}</label><input type="range" min="${prm.min}" max="${prm.max}" step="${prm.step}" value="${val}"><span class="slider-val">${fmt(val)}</span>`;
-          const range = row.querySelector('input');
-          const valEl = row.querySelector('.slider-val');
-          range.addEventListener('input', () => {
-            presetValues[activePresetIdx][prm.name] = parseFloat(range.value);
-            valEl.textContent = fmt(parseFloat(range.value));
-            updatePreview();
-          });
-          ctrl.appendChild(row);
-        }
-        list.appendChild(ctrl);
-      }
+    // 滑块控制区：常驻在预设列表下方（独立容器），选中预设时显示
+    const ctrlBox = $('preset-controls');
+    ctrlBox.innerHTML = '';
+    if (activePresetIdx < 0) {
+      ctrlBox.classList.add('hidden');
+      return;
+    }
+    const p = PRESETS[activePresetIdx];
+    const realParams = p.params.filter(prm => prm.name !== '_');
+    if (!realParams.length) {
+      ctrlBox.classList.add('hidden');
+      return;
+    }
+    ctrlBox.classList.remove('hidden');
+    for (const prm of realParams) {
+      const val = presetValues[activePresetIdx][prm.name];
+      const row = document.createElement('div');
+      row.className = 'slider-row';
+      row.innerHTML = `<label>${prm.name}</label><input type="range" min="${prm.min}" max="${prm.max}" step="${prm.step}" value="${val}"><span class="slider-val">${fmt(val)}</span>`;
+      const range = row.querySelector('input');
+      const valEl = row.querySelector('.slider-val');
+      range.addEventListener('input', () => {
+        presetValues[activePresetIdx][prm.name] = parseFloat(range.value);
+        valEl.textContent = fmt(parseFloat(range.value));
+        updatePreview();
+      });
+      ctrlBox.appendChild(row);
     }
   }
 
@@ -243,7 +247,7 @@
       actionModes.classList.remove('hidden');
       const pl = st.players[st.turn];
       const alive = HF.alivePieces(st.turn).length;
-      $('info').textContent = `玩家 ${st.turn} · 第 ${st.turnCount}回合 · 存活${alive} · 能量${pl.energy}/${HF.ENERGY_MAX} · 陷阱${pl.traps.length}/${HF.MAX_TRAPS}`;
+      $('info').textContent = `玩家 ${st.turn} · 第 ${st.turnCount}回合 · 存活${alive} · 陷阱${pl.traps.length}/${HF.MAX_TRAPS}`;
       setActionMode(st.actionMode);
     }
   }
@@ -264,7 +268,7 @@
     $('btn-move').classList.toggle('active', mode === 'move');
     $('btn-trap').classList.toggle('active', mode === 'trap');
     if (mode === 'trap') {
-      flashHint('陷阱模式：选中棋子后点击相邻格埋设(耗' + HF.ENERGY_TRAP_COST + '能量)');
+      flashHint('陷阱模式：选中棋子后点击相邻格埋设(每方限' + HF.MAX_TRAPS + '个)');
     }
   }
 
@@ -519,9 +523,8 @@
       }
     } else if (action.type === 'laser') {
       const anchor = st.players[st.turn].pieces.find(p => p.id === action.pieceId && p.alive);
-      if (!anchor || st.players[st.turn].energy < HF.ENERGY_LASER_COST) { nextTurnHandoffNet(); return; }
+      if (!anchor) { nextTurnHandoffNet(); return; }
       st.busy = true;
-      st.players[st.turn].energy -= HF.ENERGY_LASER_COST;
       // 重建 curve
       const r = buildCurveSimpleLocal(action.desc);
       if (!r.ok) { nextTurnHandoffNet(); return; }
@@ -707,8 +710,7 @@
     } else if (res.trapHit) {
       showMsg('踩中敌方陷阱！棋子阵亡');
     } else {
-      const eg = res.energyGain > 0 ? ` (能量+${res.energyGain})` : '';
-      showMsg('已移动' + eg);
+      showMsg('已移动');
     }
     setTimeout(() => {
       st.busy = false;
@@ -732,7 +734,7 @@
     if (st.mode === 'net') {
       HF.net.sendAction({ type: 'trap', pieceId: piece.id, x, y });
     }
-    showMsg(`埋设陷阱 @(${x},${y}) · 能量-${HF.ENERGY_TRAP_COST}`);
+    showMsg(`埋设陷阱 @(${x},${y})`);
     setTimeout(() => {
       st.busy = false;
       clearMsg();
@@ -749,11 +751,6 @@
     if (!st.selectedPieceId) { flashHint('请先选择锚点棋子'); return; }
     const anchor = st.players[st.turn].pieces.find(p => p.id === st.selectedPieceId && p.alive);
     if (!anchor) { flashHint('锚点无效'); return; }
-    // 能量检查
-    if (st.players[st.turn].energy < HF.ENERGY_LASER_COST) {
-      flashHint('能量不足(需' + HF.ENERGY_LASER_COST + '，当前' + st.players[st.turn].energy + ')');
-      return;
-    }
 
     let curve, label, desc;
     if (activePresetIdx >= 0) {
@@ -777,7 +774,6 @@
 
     st.busy = true;
     st.previewLaser = null;
-    st.players[st.turn].energy -= HF.ENERGY_LASER_COST;
     // 联机模式广播（包含曲线描述供对手重放）
     if (st.mode === 'net') {
       HF.net.sendAction({ type: 'laser', pieceId: anchor.id, desc: desc });
@@ -899,9 +895,7 @@
     const st = HF.state;
     const anchor = st.players.B.pieces.find(p => p.id === action.pieceId && p.alive);
     if (!anchor) { nextTurnHandoff(); return; }
-    if (st.players.B.energy < HF.ENERGY_LASER_COST) { nextTurnHandoff(); return; }
     st.busy = true;
-    st.players.B.energy -= HF.ENERGY_LASER_COST;
     const allPieces = st.players.A.pieces.concat(st.players.B.pieces);
     const result = HF.generateLaser(action.curve, { x: anchor.x, y: anchor.y }, allPieces, anchor.id);
     st.currentLaser = { points: result.points, hits: result.hits, startTime: performance.now() };

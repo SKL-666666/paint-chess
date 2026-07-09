@@ -60,7 +60,7 @@
       drawArrows();
       drawTrapHints();
       drawExplosions();
-      drawEnergyBar();
+      drawTrapCount();
       drawBorder();
     },
   };
@@ -368,7 +368,7 @@
     const player = st.turn;
     const pc = st.players[player].pieces.find(p => p.id === st.selectedPieceId && p.alive);
     if (!pc) return;
-    const canAfford = st.players[player].energy >= HF.ENERGY_TRAP_COST;
+    const canAfford = true;  // 能量机制已移除
     const trapCount = st.players[player].traps.length;
     for (const dir of HF.DIRECTIONS) {
       const nx = pc.x + dir.dx, ny = pc.y + dir.dy;
@@ -432,47 +432,20 @@
     }
   }
 
-  // ===== 能量条 =====
-  function drawEnergyBar() {
+  // ===== 陷阱计数（右上角） =====
+  function drawTrapCount() {
     const st = HF.state;
     if (st.phase !== 'play' && st.phase !== 'setup') return;
-    const player = st.phase === 'setup' ? st.setupPlayer : st.turn;
+    const player = st.phase === 'setup' ? st.setupPlayer : (st.mode === 'net' ? st.myRole : st.turn);
     const pl = st.players[player];
     if (!pl) return;
-    const energy = pl.energy;
-    const ratio = energy / HF.ENERGY_MAX;
-    // 右上角能量条
-    const barW = scale * 4;
-    const barH = 8;
-    const x = cssSize - pad - barW - 4;
+    const x = cssSize - pad - scale * 4 - 4;
     const y = pad - 14;
-    if (y < 4) return; // 空间不足则不画
-    // 背景
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(x, y, barW, barH);
-    // 填充：能量越高越青，低则红
-    let color;
-    if (ratio > 0.5) color = 'rgba(0,255,255,0.8)';
-    else if (ratio > 0.25) color = 'rgba(255,200,0,0.8)';
-    else color = 'rgba(255,80,80,0.8)';
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, barW * ratio, barH);
-    // 边框
-    ctx.strokeStyle = 'rgba(0,255,255,0.3)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, barW, barH);
-    // 激光消耗刻度
-    const laserMark = (HF.ENERGY_LASER_COST / HF.ENERGY_MAX) * barW;
-    ctx.strokeStyle = 'rgba(0,255,255,0.5)';
-    ctx.beginPath();
-    ctx.moveTo(x + laserMark, y);
-    ctx.lineTo(x + laserMark, y + barH);
-    ctx.stroke();
-    // 文字
+    if (y < 4) return;
     ctx.fillStyle = '#8aa';
-    ctx.font = '10px monospace';
+    ctx.font = '11px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(`能量 ${energy}/${HF.ENERGY_MAX} · 陷阱${pl.traps.length}/${HF.MAX_TRAPS}`, x, y - 2);
+    ctx.fillText(`陷阱 ${pl.traps.length}/${HF.MAX_TRAPS}`, x, y - 2);
   }
 })();

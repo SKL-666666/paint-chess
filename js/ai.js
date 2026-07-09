@@ -267,10 +267,9 @@
     const prob = HF.ai.enemyProbMap(enemyPlayer);
     if (prob.aliveCount === 0) return null;
     const topTargets = prob.candidates.slice(0, 6);
-    const myEnergy = st.players[myPlayer].energy;
     const myTraps = st.players[myPlayer].traps.length;
-    const canLaser = myEnergy >= HF.ENERGY_LASER_COST;
-    const canTrap = myEnergy >= HF.ENERGY_TRAP_COST && myTraps < HF.MAX_TRAPS;
+    const canLaser = true;  // 能量机制已移除，激光随时可用
+    const canTrap = myTraps < HF.MAX_TRAPS;
 
     let bestAction = null;
     let bestScore = -Infinity;
@@ -301,7 +300,7 @@
       }
     }
 
-    // === 候选 1：激光发射（需能量充足） ===
+    // === 候选 1：激光发射 ===
     if (canLaser) {
       for (const anchor of myPieces) {
         const descs = [];
@@ -334,7 +333,7 @@
       }
     }
 
-    // === 候选 2：埋设陷阱（需能量 + 未满上限，困难/普通难度才用） ===
+    // === 候选 2：埋设陷阱（未满上限，困难/普通难度才用） ===
     if (canTrap && HF.ai.difficulty >= 1) {
       // 策略 A：在己方王周围埋陷阱（防御）
       for (const dir of HF.DIRECTIONS) {
@@ -405,8 +404,6 @@
             const tp = prob.grid.get(nx + ',' + ny) || 0;
             score -= tp * 4;
           }
-          // 能量低时鼓励移动（回复能量）
-          if (myEnergy < HF.ENERGY_LASER_COST) score += 2;
           score += Math.random() * 0.3;
           score -= 3;
           if (score > bestScore) {

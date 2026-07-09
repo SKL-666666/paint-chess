@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>隐函数战局</title>
-<link rel="stylesheet" href="style.css?v=15" />
+<link rel="stylesheet" href="style.css?v=16" />
 <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.js"></script>
 <script src="peerjs.min.js"></script>
 </head>
@@ -34,8 +34,9 @@
         <input id="laser-input" type="text" placeholder="如 y=2x 或 x=3 或 y=sin(x)" maxlength="30" autocomplete="off" />
         <button id="btn-fire" class="btn primary">发射</button>
         <span id="laser-hint" class="hint"></span>
-        <div class="preset-title">预设函数（系数自动补全）</div>
+        <div class="preset-title">预设函数（玩家自主调节）</div>
         <div id="preset-list" class="preset-list"></div>
+        <div id="preset-controls" class="preset-controls hidden"></div>
       </aside>
     </div>
     <div id="action-msg" class="action-msg hidden"></div>
@@ -49,7 +50,7 @@
       <div class="mode-select">
         <button id="btn-start-2p" class="btn primary">双人对战</button>
         <button id="btn-start-ai" class="btn primary">人机对战</button>
-        <button id="btn-start-net" class="btn primary">局域网联机</button>
+        <button id="btn-start-net" class="btn primary">公网联机</button>
       </div>
       <div id="net-panel" class="net-panel hidden">
         <div class="net-tabs">
@@ -80,7 +81,7 @@
       <button id="btn-rules" class="btn ghost">规则速览</button>
       <div id="rules-panel" class="rules-panel hidden">
         <p>11×11 坐标棋盘，双方各 5 子（1 王 4 护卫），秘密布阵于己方半场。</p>
-        <p>每回合三选一：<b>移动</b>（8方向1-2格，撞敌同归于尽，+12能量）· <b>激光</b>（输入y=f(x)，曲线须擦过锚点0.5内，耗30能量）· <b>陷阱</b>（相邻格埋设，耗25能量，每方限2个）。</p>
+        <p>每回合三选一：<b>移动</b>（8方向1-2格，撞敌同归于尽）· <b>激光</b>（输入y=f(x)，曲线须擦过锚点0.5内）· <b>陷阱</b>（相邻格埋设，每方限3个）。</p>
         <p>激光遇镜面反射，遇棋子即止。<b>共振连锁</b>：命中点1格内其他棋子被连锁引爆。</p>
         <p>踩中敌方陷阱即死。击杀或陷阱致敌王死亡即胜。</p>
       </div>
@@ -106,12 +107,12 @@
 
 </div>
 
-<script src="js/game-state.js?v=15"></script>
-<script src="js/math-engine.js?v=15"></script>
-<script src="js/renderer.js?v=15"></script>
-<script src="js/ai.js?v=15"></script>
-<script src="js/net.js?v=15"></script>
-<script src="js/ui.js?v=15"></script>
-<script src="js/main.js?v=15"></script>
+<script src="js/game-state.js?v=16"></script>
+<script src="js/math-engine.js?v=16"></script>
+<script src="js/renderer.js?v=16"></script>
+<script src="js/ai.js?v=16"></script>
+<script src="js/net.js?v=16"></script>
+<script src="js/ui.js?v=16"></script>
+<script src="js/main.js?v=16"></script>
 </body>
 </html>

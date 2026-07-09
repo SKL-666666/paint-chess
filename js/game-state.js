@@ -10,11 +10,7 @@
   HF.MAX_GUARDS = 4;
 
   // 创新玩法常量
-  HF.ENERGY_MAX = 100;
-  HF.ENERGY_MOVE_GAIN = 12;       // 移动回复能量
-  HF.ENERGY_LASER_COST = 30;      // 发射激光消耗
-  HF.ENERGY_TRAP_COST = 25;       // 埋设陷阱消耗
-  HF.MAX_TRAPS = 2;               // 每方最多陷阱数
+  HF.MAX_TRAPS = 3;               // 每方最多陷阱数
   HF.RESONANCE_RADIUS = 1.0;      // 共振连锁半径
 
   // 8 个移动方向
@@ -39,8 +35,8 @@
       turn: 'A',               // 当前回合玩家
       myRole: null,            // 联机模式下本机角色 'A'|'B'
       players: {
-        A: { pieces: [], energy: 50, traps: [] },
-        B: { pieces: [], energy: 50, traps: [] },
+        A: { pieces: [], traps: [] },
+        B: { pieces: [], traps: [] },
       },
       obstacles: [],
       trails: [],              // 历史激光轨迹
@@ -148,7 +144,7 @@
 
   // ===== 移动 =====
   // dx,dy 为 8 方向 × 1 或 2 步（|dx|,|dy| ∈ {0,1,2} 且 |dx|==|dy| 或其一为0）
-  // 返回 { ok, collision, trapHit, deadMine, deadEnemy, kingDead, moved, energyGain }
+  // 返回 { ok, collision, trapHit, deadMine, deadEnemy, kingDead, moved }
   HF.movePiece = function (player, pieceId, dx, dy) {
     const st = HF.state;
     const mine = st.players[player].pieces.find(p => p.id === pieceId && p.alive);
@@ -168,7 +164,7 @@
     const enemyTraps = st.players[enemy].traps;
     const trapIdx = enemyTraps.findIndex(t => t.x === nx && t.y === ny);
 
-    let res = { ok: true, collision: false, trapHit: false, kingDead: [], moved: null, energyGain: 0 };
+    let res = { ok: true, collision: false, trapHit: false, kingDead: [], moved: null };
     if (enemyPiece) {
       mine.alive = false;
       enemyPiece.alive = false;
@@ -189,28 +185,22 @@
     } else {
       mine.x = nx; mine.y = ny;
       res.moved = mine;
-      // 移动回复能量
-      const before = st.players[player].energy;
-      st.players[player].energy = Math.min(HF.ENERGY_MAX, before + HF.ENERGY_MOVE_GAIN);
-      res.energyGain = st.players[player].energy - before;
     }
     return res;
   };
 
   // ===== 埋设陷阱 =====
-  // 在 (x,y) 埋设陷阱，消耗 ENERGY_TRAP_COST 能量 + 回合
+  // 在 (x,y) 埋设陷阱，消耗本回合
   HF.placeTrap = function (player, x, y) {
     const st = HF.state;
     if (!HF.inBoard(x, y)) return { ok: false, msg: '越界' };
     if (st.players[player].traps.length >= HF.MAX_TRAPS) return { ok: false, msg: '陷阱已达上限(' + HF.MAX_TRAPS + ')' };
-    if (st.players[player].energy < HF.ENERGY_TRAP_COST) return { ok: false, msg: '能量不足(需' + HF.ENERGY_TRAP_COST + ')' };
     if (st.players[player].traps.some(t => t.x === x && t.y === y)) return { ok: false, msg: '该格已有陷阱' };
     // 不能埋在己方棋子下
     if (st.players[player].pieces.some(p => p.alive && p.x === x && p.y === y)) return { ok: false, msg: '不能在己方棋子上埋陷阱' };
     // 不能埋在敌方棋子上（会暴露位置）
     const enemy = player === 'A' ? 'B' : 'A';
     if (st.players[enemy].pieces.some(p => p.alive && p.x === x && p.y === y)) return { ok: false, msg: '该格不可用' };
-    st.players[player].energy -= HF.ENERGY_TRAP_COST;
     st.players[player].traps.push({ x, y });
     return { ok: true };
   };
