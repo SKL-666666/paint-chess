@@ -16,7 +16,6 @@
     if (typeof input !== 'string') return { ok: false, msg: '请输入函数' };
     const raw = input.replace(/\s+/g, '');
     if (raw.length === 0) return { ok: false, msg: '表达式为空' };
-    if (raw.length > 30) return { ok: false, msg: '字符数超过 30' };
     const m = raw.match(/^(y|x)=(.+)$/i);
     if (!m) return { ok: false, msg: '需形如 y=f(x) 或 x=c' };
     const side = m[1].toLowerCase();
