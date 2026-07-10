@@ -8,18 +8,22 @@
   // 难度：0=简单 1=普通 2=困难
   HF.ai.difficulty = 1;
 
-  // ===== AI 布阵：仅在最前排布阵，王选隐蔽角，护卫分散 =====
+  // ===== AI 布阵：在布阵区内，王选隐蔽角，护卫分散 =====
   HF.ai.doSetup = function (player) {
     const st = HF.state;
-    const setupY = player === 'A' ? HF.SETUP_A_Y : HF.SETUP_B_Y;
+    const minY = player === 'A' ? HF.SETUP_A_MIN_Y : HF.SETUP_B_MIN_Y;
+    const maxY = player === 'A' ? HF.SETUP_A_MAX_Y : HF.SETUP_B_MAX_Y;
     const occupied = new Set();
     const key = (x, y) => x + ',' + y;
-    const inZone = (x, y) => y === setupY && HF.inBoard(x, y);
+    const inZone = (x, y) => y >= minY && y <= maxY && HF.inBoard(x, y);
     const placed = [];
 
     // 评估格点对王的隐蔽性：被障碍物遮挡越多越好 + 靠边
     function concealment(x, y) {
       let score = Math.abs(x) * 0.5; // 靠边
+      // 靠近己方底线（远离中线）更隐蔽
+      const edgeBonus = player === 'A' ? -y : y;
+      score += edgeBonus * 0.3;
       for (const ob of st.obstacles) {
         const ocx = (ob.x1 + ob.x2) / 2, ocy = (ob.y1 + ob.y2) / 2;
         const d = Math.hypot(ocx - x, ocy - y);
@@ -28,17 +32,19 @@
       return score;
     }
 
-    // 王：选隐蔽性最高的格点（仅在最前排）
+    // 王：选隐蔽性最高的格点
     let kingPos = null, kingScore = -Infinity;
     for (let x = HF.BOARD_MIN; x <= HF.BOARD_MAX; x++) {
-      if (!inZone(x, setupY)) continue;
-      const s = concealment(x, setupY) + Math.random() * 0.3;
-      if (s > kingScore) { kingScore = s; kingPos = { x, y: setupY }; }
+      for (let y = minY; y <= maxY; y++) {
+        if (!inZone(x, y)) continue;
+        const s = concealment(x, y) + Math.random() * 0.3;
+        if (s > kingScore) { kingScore = s; kingPos = { x, y }; }
+      }
     }
     placed.push({ x: kingPos.x, y: kingPos.y, type: 'king' });
     occupied.add(key(kingPos.x, kingPos.y));
 
-    // 护卫：分散放置，与王距离 ≥2
+    // 护卫：分散放置，与王距离 2-4
     function distToNearest(x, y) {
       let m = Infinity;
       for (const p of placed) m = Math.min(m, Math.hypot(x - p.x, y - p.y));
@@ -47,13 +53,15 @@
     for (let i = 0; i < HF.MAX_GUARDS; i++) {
       let best = null, bestScore = -Infinity;
       for (let x = HF.BOARD_MIN; x <= HF.BOARD_MAX; x++) {
-        if (!inZone(x, setupY) || occupied.has(key(x, setupY))) continue;
-        const dKing = Math.hypot(x - kingPos.x);
-        const dNear = distToNearest(x, setupY);
-        let score = dNear;  // 与最近棋子距离
-        if (dKing >= 2) score += 3;  // 与王保持距离
-        score += Math.random() * 0.5;
-        if (score > bestScore) { bestScore = score; best = { x, y: setupY }; }
+        for (let y = minY; y <= maxY; y++) {
+          if (!inZone(x, y) || occupied.has(key(x, y))) continue;
+          const dKing = Math.hypot(x - kingPos.x, y - kingPos.y);
+          const dNear = distToNearest(x, y);
+          let score = dNear;  // 与最近棋子距离
+          if (dKing >= 2 && dKing <= 4) score += 3;  // 与王适中
+          score += Math.random() * 0.5;
+          if (score > bestScore) { bestScore = score; best = { x, y }; }
+        }
       }
       if (best) {
         placed.push({ x: best.x, y: best.y, type: 'guard' });
@@ -70,23 +78,25 @@
   // ===== 敌方位置概率图 =====
   HF.ai.enemyProbMap = function (enemyPlayer) {
     const st = HF.state;
-    // 敌方布阵仅在最前排，概率图也聚焦该排 + 移动后可达区域
-    const enemySetupY = enemyPlayer === 'A' ? HF.SETUP_A_Y : HF.SETUP_B_Y;
+    // 敌方布阵区：中线到倒数第二排之间 + 移动可达区域
+    const enemySetupMinY = enemyPlayer === 'A' ? HF.SETUP_A_MIN_Y : HF.SETUP_B_MIN_Y;
+    const enemySetupMaxY = enemyPlayer === 'A' ? HF.SETUP_A_MAX_Y : HF.SETUP_B_MAX_Y;
     const grid = new Map();
     const aliveEnemies = st.players[enemyPlayer].pieces.filter(p => p.alive);
     const aliveCount = aliveEnemies.length;
     if (aliveCount === 0) return { grid, candidates: [], aliveCount: 0 };
 
-    // 基础概率：敌方可能在的 y 范围（布阵排 ± 4 格移动范围）
-    const enemyMinY = enemyPlayer === 'A' ? Math.max(HF.BOARD_MIN, enemySetupY - 4) : enemySetupY;
-    const enemyMaxY = enemyPlayer === 'B' ? Math.min(HF.BOARD_MAX, enemySetupY + 4) : enemySetupY;
+    // 基础概率：敌方可能在的 y 范围（布阵区 ± 4 格移动范围）
+    const enemyMinY = enemyPlayer === 'A' ? Math.max(HF.BOARD_MIN, enemySetupMinY - 4) : enemySetupMinY;
+    const enemyMaxY = enemyPlayer === 'B' ? Math.min(HF.BOARD_MAX, enemySetupMaxY + 4) : enemySetupMaxY;
     const cells = [];
     for (let x = HF.BOARD_MIN; x <= HF.BOARD_MAX; x++) {
       for (let y = enemyMinY; y <= enemyMaxY; y++) cells.push({ x, y });
     }
-    // 布阵排概率更高
+    // 布阵区内概率更高
     for (const c of cells) {
-      const boost = c.y === enemySetupY ? 2 : 1;
+      const inSetup = c.y >= enemySetupMinY && c.y <= enemySetupMaxY;
+      const boost = inSetup ? 2 : 1;
       grid.set(c.x + ',' + c.y, boost);
     }
     let total = 0;

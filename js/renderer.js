@@ -93,14 +93,15 @@
     const st = HF.state;
     if (st.phase !== 'setup') return;
     const player = st.setupPlayer;
-    // 仅高亮最前排（鼓励进攻）
-    const y = player === 'A' ? HF.SETUP_A_Y : HF.SETUP_B_Y;
-    const tl = HF.renderer.w2s(HF.BOARD_MIN, y + 0.5);
-    const h = scale * 1;  // 一格高
+    // 高亮布阵区：中线到倒数第二排之间
+    const yTop = player === 'A' ? HF.SETUP_A_MIN_Y + 0.5 : HF.SETUP_B_MAX_Y + 0.5;
+    const yBot = player === 'A' ? HF.SETUP_A_MAX_Y - 0.5 : HF.SETUP_B_MIN_Y - 0.5;
+    const tl = HF.renderer.w2s(HF.BOARD_MIN, yTop);
+    const h = scale * (yTop - yBot);
     const w = scale * (HF.BOARD_MAX - HF.BOARD_MIN);
-    ctx.fillStyle = 'rgba(0,255,255,0.08)';
+    ctx.fillStyle = 'rgba(0,255,255,0.06)';
     ctx.fillRect(tl.px, tl.py, w, h);
-    ctx.strokeStyle = 'rgba(0,255,255,0.4)';
+    ctx.strokeStyle = 'rgba(0,255,255,0.35)';
     ctx.lineWidth = 1;
     ctx.strokeRect(tl.px, tl.py, w, h);
   }

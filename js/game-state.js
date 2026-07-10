@@ -7,8 +7,11 @@
   HF.BOARD_MAX = 5;
   HF.HALF_A_MAX_Y = -3; // 玩家 A 半场 y ≤ -3
   HF.HALF_B_MIN_Y = 3;  // 玩家 B 半场 y ≥ 3
-  HF.SETUP_A_Y = -3;    // 玩家 A 仅允许在最靠近中部的一排布阵（鼓励进攻）
-  HF.SETUP_B_Y = 3;     // 玩家 B 仅允许在最靠近中部的一排布阵
+  // 布阵区：中线到倒数第二排之间（禁止最后两排靠边，鼓励进攻）
+  HF.SETUP_A_MIN_Y = -3;  // A 最前（靠近中线）
+  HF.SETUP_A_MAX_Y = -1;  // A 最后（倒数第三排，禁止 -5,-4）
+  HF.SETUP_B_MIN_Y = 1;   // B 最前（靠近中线）
+  HF.SETUP_B_MAX_Y = 3;   // B 最后（倒数第三排，禁止 4,5）
   HF.MAX_GUARDS = 4;
 
   // 创新玩法常量
@@ -138,8 +141,9 @@
   };
 
   function inSetupZone(player, y) {
-    // 仅允许在最靠近中部的一排布阵（鼓励进攻）
-    return player === 'A' ? y === HF.SETUP_A_Y : y === HF.SETUP_B_Y;
+    // 布阵区：中线到倒数第二排之间（禁止最后两排靠边）
+    if (player === 'A') return y >= HF.SETUP_A_MIN_Y && y <= HF.SETUP_A_MAX_Y;
+    return y >= HF.SETUP_B_MIN_Y && y <= HF.SETUP_B_MAX_Y;
   }
   function occupied(st, player, x, y) {
     return st.players[player].pieces.some(pc => pc.x === x && pc.y === y);
