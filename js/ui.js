@@ -225,8 +225,11 @@
   }
   function refreshTopbar() {
     const st = HF.state;
-    // 延迟到下一帧 resize，确保 DOM 布局已完成（修复初始棋盘过小）
-    requestAnimationFrame(() => HF.renderer.resize());
+    // 仅在游戏区从隐藏切换到显示时 resize 一次（修复初始棋盘过小）
+    if (!refreshTopbar._resized) {
+      refreshTopbar._resized = true;
+      requestAnimationFrame(() => HF.renderer.resize());
+    }
     const setupTypes = $('setup-types');
     const confirmBtn = $('btn-confirm-setup');
     const laserPanel = $('laser-panel');
@@ -277,6 +280,7 @@
   function onStart(mode) {
     HF.newGame();
     HF.state.mode = mode;
+    refreshTopbar._resized = false;  // 重置 resize 标志，让首次显示时重新 resize
     if (mode === 'ai') {
       // 人机模式：玩家为 A，AI 为 B。A 先布阵
       HF.state.phase = 'handoff';
@@ -903,6 +907,11 @@
     const anchor = st.players.B.pieces.find(p => p.id === action.pieceId && p.alive);
     if (!anchor) { nextTurnHandoff(); return; }
     st.busy = true;
+    // 记录 AI 用过的曲线标签，避免重复
+    if (action.label && HF.ai && HF.ai.recentLasers) {
+      HF.ai.recentLasers.push(action.label);
+      if (HF.ai.recentLasers.length > 3) HF.ai.recentLasers.shift();
+    }
     const allPieces = st.players.A.pieces.concat(st.players.B.pieces);
     const result = HF.generateLaser(action.curve, { x: anchor.x, y: anchor.y }, allPieces, anchor.id);
     st.currentLaser = { points: result.points, hits: result.hits, startTime: performance.now() };

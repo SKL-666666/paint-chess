@@ -8,45 +8,37 @@
   // 难度：0=简单 1=普通 2=困难
   HF.ai.difficulty = 1;
 
-  // ===== AI 布阵：王放障碍物阴影区，护卫分散 =====
+  // ===== AI 布阵：仅在最前排布阵，王选隐蔽角，护卫分散 =====
   HF.ai.doSetup = function (player) {
     const st = HF.state;
-    const minY = player === 'A' ? HF.BOARD_MIN : HF.HALF_B_MIN_Y;
-    const maxY = player === 'A' ? HF.HALF_A_MAX_Y : HF.BOARD_MAX;
+    const setupY = player === 'A' ? HF.SETUP_A_Y : HF.SETUP_B_Y;
     const occupied = new Set();
     const key = (x, y) => x + ',' + y;
-    const inZone = (x, y) => y >= minY && y <= maxY && HF.inBoard(x, y);
+    const inZone = (x, y) => y === setupY && HF.inBoard(x, y);
     const placed = [];
 
     // 评估格点对王的隐蔽性：被障碍物遮挡越多越好 + 靠边
     function concealment(x, y) {
-      let score = Math.abs(x) * 0.5 + (player === 'B' ? y : -y) * 0.5; // 靠边
-      // 从敌方方向(中部)到 (x,y) 的射线被几个障碍物遮挡
-      const enemyCenterY = player === 'B' ? 0 : 0;
+      let score = Math.abs(x) * 0.5; // 靠边
       for (const ob of st.obstacles) {
-        // 粗略：障碍物中心是否在 (x,y) 与敌中部之间
         const ocx = (ob.x1 + ob.x2) / 2, ocy = (ob.y1 + ob.y2) / 2;
-        const dist = HF.math.distPointToSegment({ x, y }, { x: ocx, y: ocy }, { x: ocx, y: ocy });
-        // 王到障碍物距离适中(1-3)算有遮挡
         const d = Math.hypot(ocx - x, ocy - y);
         if (d > 0.5 && d < 4) score += 1.5;
       }
       return score;
     }
 
-    // 王：选隐蔽性最高的角落格点
+    // 王：选隐蔽性最高的格点（仅在最前排）
     let kingPos = null, kingScore = -Infinity;
     for (let x = HF.BOARD_MIN; x <= HF.BOARD_MAX; x++) {
-      for (let y = minY; y <= maxY; y++) {
-        if (!inZone(x, y)) continue;
-        const s = concealment(x, y) + Math.random() * 0.3;
-        if (s > kingScore) { kingScore = s; kingPos = { x, y }; }
-      }
+      if (!inZone(x, setupY)) continue;
+      const s = concealment(x, setupY) + Math.random() * 0.3;
+      if (s > kingScore) { kingScore = s; kingPos = { x, y: setupY }; }
     }
     placed.push({ x: kingPos.x, y: kingPos.y, type: 'king' });
     occupied.add(key(kingPos.x, kingPos.y));
 
-    // 护卫：分散放置，与王距离 2-4，不在王与中部连线上
+    // 护卫：分散放置，与王距离 ≥2
     function distToNearest(x, y) {
       let m = Infinity;
       for (const p of placed) m = Math.min(m, Math.hypot(x - p.x, y - p.y));
@@ -55,19 +47,13 @@
     for (let i = 0; i < HF.MAX_GUARDS; i++) {
       let best = null, bestScore = -Infinity;
       for (let x = HF.BOARD_MIN; x <= HF.BOARD_MAX; x++) {
-        for (let y = minY; y <= maxY; y++) {
-          if (!inZone(x, y) || occupied.has(key(x, y))) continue;
-          const dKing = Math.hypot(x - kingPos.x, y - kingPos.y);
-          const dNear = distToNearest(x, y);
-          let score = dNear;  // 与最近棋子距离
-          if (dKing >= 2 && dKing <= 4) score += 3;  // 与王适中
-          // 不在王到中部的直接连线上（避免挡王或被一锅端）
-          const angleKing = Math.atan2(kingPos.y, kingPos.x);
-          const angleHere = Math.atan2(y, x);
-          if (Math.abs(angleKing - angleHere) > 0.3) score += 1;
-          score += Math.random() * 0.5;
-          if (score > bestScore) { bestScore = score; best = { x, y }; }
-        }
+        if (!inZone(x, setupY) || occupied.has(key(x, setupY))) continue;
+        const dKing = Math.hypot(x - kingPos.x);
+        const dNear = distToNearest(x, setupY);
+        let score = dNear;  // 与最近棋子距离
+        if (dKing >= 2) score += 3;  // 与王保持距离
+        score += Math.random() * 0.5;
+        if (score > bestScore) { bestScore = score; best = { x, y: setupY }; }
       }
       if (best) {
         placed.push({ x: best.x, y: best.y, type: 'guard' });
@@ -84,20 +70,28 @@
   // ===== 敌方位置概率图 =====
   HF.ai.enemyProbMap = function (enemyPlayer) {
     const st = HF.state;
-    const enemyMinY = enemyPlayer === 'A' ? HF.BOARD_MIN : HF.HALF_B_MIN_Y;
-    const enemyMaxY = enemyPlayer === 'A' ? HF.HALF_A_MAX_Y : HF.BOARD_MAX;
+    // 敌方布阵仅在最前排，概率图也聚焦该排 + 移动后可达区域
+    const enemySetupY = enemyPlayer === 'A' ? HF.SETUP_A_Y : HF.SETUP_B_Y;
     const grid = new Map();
     const aliveEnemies = st.players[enemyPlayer].pieces.filter(p => p.alive);
     const aliveCount = aliveEnemies.length;
     if (aliveCount === 0) return { grid, candidates: [], aliveCount: 0 };
 
-    // 基础概率：布阵区内均匀分布
+    // 基础概率：敌方可能在的 y 范围（布阵排 ± 4 格移动范围）
+    const enemyMinY = enemyPlayer === 'A' ? Math.max(HF.BOARD_MIN, enemySetupY - 4) : enemySetupY;
+    const enemyMaxY = enemyPlayer === 'B' ? Math.min(HF.BOARD_MAX, enemySetupY + 4) : enemySetupY;
     const cells = [];
     for (let x = HF.BOARD_MIN; x <= HF.BOARD_MAX; x++) {
       for (let y = enemyMinY; y <= enemyMaxY; y++) cells.push({ x, y });
     }
-    let base = 1 / cells.length;
-    for (const c of cells) grid.set(c.x + ',' + c.y, base);
+    // 布阵排概率更高
+    for (const c of cells) {
+      const boost = c.y === enemySetupY ? 2 : 1;
+      grid.set(c.x + ',' + c.y, boost);
+    }
+    let total = 0;
+    for (const v of grid.values()) total += v;
+    if (total > 0) for (const [k, v] of grid) grid.set(k, v / total);
 
     // 已知敌方棋子死亡位置曾经存在过（爆炸点）-> 排除
     // （碰撞爆炸点记录在 trails 中无，暂略）
@@ -211,14 +205,31 @@
     return out;
   }
 
-  // 通用模板（随机探索）
+  // 通用模板（随机探索）— 多样化曲线
   const AI_TEMPLATES = [
     (ax, ay) => { const a = (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 2.5); return { kind: 'explicit', expr: 'y=' + fmt(a) + '*x+' + fmt(ay - a * ax) }; },
     (ax, ay) => ({ kind: 'explicit', expr: 'y=' + fmt(ay) }),
     (ax, ay) => ({ kind: 'explicit', expr: 'x=' + fmt(ax) }),
     (ax, ay) => { const a = (Math.random() > 0.5 ? 1 : -1) * (0.05 + Math.random() * 0.4); return { kind: 'explicit', expr: 'y=' + fmt(a) + '*x^2+' + fmt(ay - a * ax * ax) }; },
     (ax, ay) => { const a = 0.8 + Math.random() * 2; const b = 0.3 + Math.random() * 1.2; return { kind: 'explicit', expr: 'y=' + fmt(a) + '*sin(' + fmt(b) + '*x+' + fmt(-b * ax) + ')' }; },
+    (ax, ay) => { const a = 0.8 + Math.random() * 2; const b = 0.3 + Math.random() * 1.2; return { kind: 'explicit', expr: 'y=' + fmt(a) + '*cos(' + fmt(b) + '*x+' + fmt(-b * ax) + ')' }; },
+    (ax, ay) => { const a = (Math.random() > 0.5 ? 1 : -1) * (0.5 + Math.random() * 1.5); const b = (Math.random() > 0.5 ? 1 : -1) * (0.5 + Math.random() * 1.5); return { kind: 'explicit', expr: 'y=' + fmt(a) + '*abs(' + fmt(b) + '*(x-' + fmt(ax) +'))+' + fmt(ay) }; },
+    (ax, ay) => { const a = (Math.random() > 0.5 ? 1 : -1) * (0.02 + Math.random() * 0.15); return { kind: 'explicit', expr: 'y=' + fmt(a) + '*x^3+' + fmt(ay - a * ax * ax * ax) }; },
+    (ax, ay) => { const a = 1 + Math.random() * 2; return { kind: 'explicit', expr: 'y=' + fmt(a) + '*tanh(x-' + fmt(ax) + ')+' + fmt(ay) }; },
+    (ax, ay) => { const a = 1 + Math.random() * 2; return { kind: 'explicit', expr: 'y=' + fmt(a) + '*exp(-0.3*(x-' + fmt(ax) +')^2)+' + fmt(ay) }; },
   ];
+
+  // 记录 AI 近期用过的曲线标签，避免重复
+  HF.ai.recentLasers = [];
+  const MAX_RECENT = 3;
+
+  function isRecentCurve(label) {
+    return HF.ai.recentLasers.indexOf(label) >= 0;
+  }
+  function recordLaser(label) {
+    HF.ai.recentLasers.push(label);
+    if (HF.ai.recentLasers.length > MAX_RECENT) HF.ai.recentLasers.shift();
+  }
 
   function fmt(v) { return Math.abs(v) < 1e-9 ? '0' : (Math.round(v * 1000) / 1000).toString(); }
 
@@ -324,6 +335,8 @@
               if (Math.hypot(pt.x - myKing.x, pt.y - myKing.y) < 0.6) { score -= 200; break; }
             }
           }
+          // 近期用过的曲线降分，鼓励多样性
+          if (isRecentCurve(r.label)) score -= 5;
           score += Math.random() * 0.5;
           if (score > bestScore) {
             bestScore = score;

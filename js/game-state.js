@@ -7,6 +7,8 @@
   HF.BOARD_MAX = 5;
   HF.HALF_A_MAX_Y = -3; // 玩家 A 半场 y ≤ -3
   HF.HALF_B_MIN_Y = 3;  // 玩家 B 半场 y ≥ 3
+  HF.SETUP_A_Y = -3;    // 玩家 A 仅允许在最靠近中部的一排布阵（鼓励进攻）
+  HF.SETUP_B_Y = 3;     // 玩家 B 仅允许在最靠近中部的一排布阵
   HF.MAX_GUARDS = 4;
 
   // 创新玩法常量
@@ -111,13 +113,13 @@
   // ===== 布阵 =====
   HF.placeSetupPiece = function (player, type, x, y) {
     const st = HF.state;
-    if (!inSetupZone(player, y)) return { ok: false, msg: '不在己方半场' };
+    if (!inSetupZone(player, y)) return { ok: false, msg: '只能在最前排布阵（鼓励进攻）' };
     if (occupied(st, player, x, y)) return { ok: false, msg: '该格已有己方棋子' };
     const p = st.players[player].pieces;
     const kings = p.filter(pc => pc.type === 'king').length;
     const guards = p.filter(pc => pc.type === 'guard').length;
     if (type === 'king' && kings >= 1) return { ok: false, msg: '王只能放置 1 枚' };
-    if (type === 'guard' && guards >= HF.MAX_GUARDS) return { ok: false, msg: '护卫最多 5 枚' };
+    if (type === 'guard' && guards >= HF.MAX_GUARDS) return { ok: false, msg: '护卫最多 4 枚' };
     p.push({ id: `${player}-${p.length}`, type, x, y, alive: true });
     return { ok: true };
   };
@@ -136,7 +138,8 @@
   };
 
   function inSetupZone(player, y) {
-    return player === 'A' ? y <= HF.HALF_A_MAX_Y : y >= HF.HALF_B_MIN_Y;
+    // 仅允许在最靠近中部的一排布阵（鼓励进攻）
+    return player === 'A' ? y === HF.SETUP_A_Y : y === HF.SETUP_B_Y;
   }
   function occupied(st, player, x, y) {
     return st.players[player].pieces.some(pc => pc.x === x && pc.y === y);
