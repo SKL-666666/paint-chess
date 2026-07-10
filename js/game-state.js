@@ -356,14 +356,16 @@
     return true;
   };
 
-  // 回合开始时刷新强制方块（困难模式，每玩家每2回合刷新）
+  // 回合开始时刷新强制方块（困难模式：无限制1回合+打方块1回合交替）
   HF.refreshMandatoryBlockIfNeeded = function (player) {
     const st = HF.state;
     if (st.difficulty !== 2) return;
     st.playerTurnCount[player]++;
-    // 第 1 回合或每 2 回合刷新
-    if (st.playerTurnCount[player] % 2 === 1) {
+    // 奇数回合：自由（无方块，旧方块消失）；偶数回合：生成新方块
+    if (st.playerTurnCount[player] % 2 === 0) {
       HF.generateMandatoryBlock(player);
+    } else {
+      st.mandatoryBlocks[player] = null;
     }
   };
 

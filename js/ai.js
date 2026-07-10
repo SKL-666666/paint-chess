@@ -8,7 +8,7 @@
   // 难度：0=简单 1=普通 2=困难
   HF.ai.difficulty = 1;
 
-  // ===== AI 布阵：在布阵区内，王选隐蔽角，护卫分散 =====
+  // ===== AI 布阵：王放死角，护卫声东击西分散进攻 =====
   HF.ai.doSetup = function (player) {
     const st = HF.state;
     const minY = player === 'A' ? HF.SETUP_A_MIN_Y : HF.SETUP_B_MIN_Y;
@@ -21,33 +21,40 @@
     for (const pc of st.players[enemy].pieces) occupied.add(key(pc.x, pc.y));
     const placed = [];
 
-    // 评估格点对王的隐蔽性：被障碍物遮挡越多越好 + 靠边
+    // 评估格点对王的隐蔽性：死角最高 + 障碍物遮挡 + 靠己方底线
     function concealment(x, y) {
-      let score = Math.abs(x) * 0.5; // 靠边
-      // 靠近己方底线（远离中线）更隐蔽
-      const edgeBonus = player === 'A' ? -y : y;
-      score += edgeBonus * 0.3;
+      let score = 0;
+      // 死角（靠边 + 靠底线）最高分
+      const isEdgeX = Math.abs(x) >= HF.BOARD_MAX - 1;
+      const isBackY = player === 'A' ? (y <= minY + 0.5) : (y >= maxY - 0.5);
+      if (isEdgeX && isBackY) score += 10;        // 真正的死角
+      else if (isEdgeX || isBackY) score += 4;    // 靠边
+      score += Math.abs(x) * 0.4;                  // 越靠边越好
+      const edgeBonus = player === 'A' ? -y : y;   // 靠近己方底线
+      score += edgeBonus * 0.6;
+      // 障碍物近距遮挡（0.5~3 格内最佳）
       for (const ob of st.obstacles) {
         const ocx = (ob.x1 + ob.x2) / 2, ocy = (ob.y1 + ob.y2) / 2;
         const d = Math.hypot(ocx - x, ocy - y);
-        if (d > 0.5 && d < 4) score += 1.5;
+        if (d > 0.5 && d < 3) score += 2.5;
+        else if (d < 4) score += 1;
       }
       return score;
     }
 
-    // 王：选隐蔽性最高的格点
+    // 王：选隐蔽性最高的格点（死角优先）
     let kingPos = null, kingScore = -Infinity;
     for (let x = HF.BOARD_MIN; x <= HF.BOARD_MAX; x++) {
       for (let y = minY; y <= maxY; y++) {
         if (!inZone(x, y)) continue;
-        const s = concealment(x, y) + Math.random() * 0.3;
+        const s = concealment(x, y) + Math.random() * 0.2;
         if (s > kingScore) { kingScore = s; kingPos = { x, y }; }
       }
     }
     placed.push({ x: kingPos.x, y: kingPos.y, type: 'king' });
     occupied.add(key(kingPos.x, kingPos.y));
 
-    // 护卫：分散放置，与王距离 2-4
+    // 护卫：声东击西 — 第1个贴王防御，后续分散向敌方推进
     function distToNearest(x, y) {
       let m = Infinity;
       for (const p of placed) m = Math.min(m, Math.hypot(x - p.x, y - p.y));
@@ -60,9 +67,24 @@
           if (!inZone(x, y) || occupied.has(key(x, y))) continue;
           const dKing = Math.hypot(x - kingPos.x, y - kingPos.y);
           const dNear = distToNearest(x, y);
-          let score = dNear;  // 与最近棋子距离
-          if (dKing >= 2 && dKing <= 4) score += 3;  // 与王适中
-          score += Math.random() * 0.5;
+          let score = dNear * 1.5;  // 分散
+          if (i === 0) {
+            // 第1护卫：贴王防御（距离1.5~2.5）
+            if (dKing >= 1.5 && dKing <= 2.5) score += 6;
+          } else {
+            // 后续护卫：向敌方推进（声东击西）
+            const enemyDir = player === 'A' ? y : -y;  // 越靠近敌方越好
+            score += enemyDir * 1.0;
+            if (dKing >= 3) score += 3;  // 远离王
+            // 避免与已有护卫在同一线（防一条曲线全灭）
+            for (const p of placed) {
+              if (p.type === 'guard') {
+                if (p.x === x) score -= 4;
+                if (p.y === y) score -= 3;
+              }
+            }
+          }
+          score += Math.random() * 0.4;
           if (score > bestScore) { bestScore = score; best = { x, y }; }
         }
       }
@@ -420,8 +442,15 @@
       }
     }
 
-    // === 候选 3：移动 ===
+    // === 候选 3：移动（分散进攻，不同护卫瞄准不同目标） ===
     const enemyKingGuess = prob.candidates[0];
+    // 为每个护卫分配不同进攻目标（声东击西，避免集中）
+    const guards = myPieces.filter(p => p.type === 'guard');
+    const assignTargets = [];
+    for (let gi = 0; gi < guards.length; gi++) {
+      const ti = gi % Math.min(topTargets.length, guards.length);
+      assignTargets[guards[gi].id] = topTargets[ti] || enemyKingGuess;
+    }
     for (const piece of myPieces) {
       for (const dir of HF.DIRECTIONS) {
         for (const steps of [1, 2]) {
@@ -437,10 +466,12 @@
             }
             score = -dng;
           } else {
-            if (enemyKingGuess) {
-              const dOld = Math.hypot(piece.x - enemyKingGuess.x, piece.y - enemyKingGuess.y);
-              const dNew = Math.hypot(nx - enemyKingGuess.x, ny - enemyKingGuess.y);
-              score = (dOld - dNew) * 2;
+            // 分散进攻：每个护卫追自己分配的目标
+            const myTarget = assignTargets[piece.id] || enemyKingGuess;
+            if (myTarget) {
+              const dOld = Math.hypot(piece.x - myTarget.x, piece.y - myTarget.y);
+              const dNew = Math.hypot(nx - myTarget.x, ny - myTarget.y);
+              score = (dOld - dNew) * 2.5;
             }
             const tp = prob.grid.get(nx + ',' + ny) || 0;
             score -= tp * 4;
