@@ -486,7 +486,7 @@
     const st = HF.state;
     if (st.difficulty === 0) return; // 简单模式无陷阱
     if (st.phase !== 'play' && st.phase !== 'setup') return;
-    const player = st.phase === 'setup' ? st.setupPlayer : (st.mode === 'net' ? st.myRole : st.turn);
+    const player = st.phase === 'setup' ? st.setupPlayer : (st.mode === 'net' ? st.myRole : (st.mode === 'ai' ? 'A' : st.turn));
     const pl = st.players[player];
     if (!pl) return;
     const x = cssSize - pad - scale * 4 - 4;

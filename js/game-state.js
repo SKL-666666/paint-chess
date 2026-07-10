@@ -15,6 +15,7 @@
   // 创新玩法常量
   HF.MAX_TRAPS = 3;               // 每方最多陷阱数
   HF.RESONANCE_RADIUS = 1.0;      // 共振连锁半径
+  HF._nextPieceId = 0;            // 棋子ID单调递增计数器（避免重复）
 
   // 8 个移动方向
   HF.DIRECTIONS = [
@@ -56,7 +57,7 @@
       busy: false,             // 动作动画进行中，禁止操作
       previewLaser: null,      // 预览激光轨迹（未发射，实时渲染）
       resonanceChain: null,    // 共振连锁动画 {chains, startTime}
-      powerfulLaserCredits: 0,  // 强力函数使用额度（初始0，跳过回合获得1）
+      powerfulLaserCredits: { A: 0, B: 0 },  // 强力函数额度（按玩家区分，跳过回合+1）
     };
   }
   // 强大函数类型：三角函数、椭圆、玫瑰线、螺旋线、心形线、双纽线（覆盖面广）
@@ -65,6 +66,8 @@
   HF.newGame = function () {
     HF.state = freshState();
     HF.state.obstacles = HF.generateObstacles();
+    HF._nextPieceId = 0;  // 重置ID计数器
+    if (HF.ai && HF.ai.recentLasers) HF.ai.recentLasers = [];  // 重置AI曲线记忆
   };
 
   // 生成 4 块镜面线段，位置与角度全随机，4 块位于棋盘 4 个不同象限确保分散
@@ -130,7 +133,7 @@
     const guards = p.filter(pc => pc.type === 'guard').length;
     if (type === 'king' && kings >= 1) return { ok: false, msg: '王只能放置 1 枚' };
     if (type === 'guard' && guards >= HF.MAX_GUARDS) return { ok: false, msg: '护卫最多 4 枚' };
-    p.push({ id: `${player}-${p.length}`, type, x, y, alive: true });
+    p.push({ id: `${player}-${HF._nextPieceId++}`, type, x, y, alive: true });
     return { ok: true };
   };
 
@@ -303,6 +306,7 @@
     st.selectedPieceId = null;
     st.actionMode = 'move';
     st.currentLaser = null;
+    st.previewLaser = null;
     st.resonanceChain = null;
   };
 

@@ -4,9 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>函数战局</title>
-<link rel="stylesheet" href="style.css?v=28" />
+<link rel="stylesheet" href="style.css?v=29" />
 <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.1/lib/browser/math.js"></script>
-<script src="peerjs.min.js"></script>
+<script src="peerjs.min.js?v=29"></script>
 </head>
 <body>
 <div id="app">
@@ -83,7 +83,7 @@
       <button id="btn-rules" class="btn ghost">规则速览</button>
       <div id="rules-panel" class="rules-panel hidden">
         <p><b>棋盘</b>：11×11 坐标系（x,y ∈ [-5,5]），双方各 5 子（1 王 + 4 护卫）。</p>
-        <p><b>布阵</b>：A 布于 y∈[-3,0]，B 布于 y∈[0,3]，共享中线 y=0。王必须放置，护卫分散配置。禁止放置在中线 y=0 上。</p>
+        <p><b>布阵</b>：A 布于 y∈[-3,0]，B 布于 y∈[0,3]，共享中线 y=0。王必须放置，护卫分散配置。中线格同一方不重复占位，双方均可使用。</p>
         <p><b>每回合四选一</b>：</p>
         <p>· <b>跳过</b>：本回合不行动，获得 1 次强力函数额度（可累积）。</p>
         <p>· <b>移动</b>：8 方向 1-2 格，移至敌方棋子同格则同归于尽。</p>
@@ -120,12 +120,12 @@
 
 </div>
 
-<script src="js/game-state.js?v=28"></script>
-<script src="js/math-engine.js?v=28"></script>
-<script src="js/renderer.js?v=28"></script>
-<script src="js/ai.js?v=28"></script>
-<script src="js/net.js?v=28"></script>
-<script src="js/ui.js?v=28"></script>
-<script src="js/main.js?v=28"></script>
+<script src="js/game-state.js?v=29"></script>
+<script src="js/math-engine.js?v=29"></script>
+<script src="js/renderer.js?v=29"></script>
+<script src="js/ai.js?v=29"></script>
+<script src="js/net.js?v=29"></script>
+<script src="js/ui.js?v=29"></script>
+<script src="js/main.js?v=29"></script>
 </body>
 </html>

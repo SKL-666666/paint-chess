@@ -57,6 +57,7 @@
       }
     }
     const kingPick = pickFromCandidates(kingCands, 4);
+    if (!kingPick) return;  // 候选为空时安全退出
     const kingPos = { x: kingPick.x, y: kingPick.y };
     placed.push({ x: kingPos.x, y: kingPos.y, type: 'king' });
     occupied.add(key(kingPos.x, kingPos.y));
@@ -275,10 +276,6 @@
   function isRecentCurve(label) {
     return HF.ai.recentLasers.indexOf(label) >= 0;
   }
-  function recordLaser(label) {
-    HF.ai.recentLasers.push(label);
-    if (HF.ai.recentLasers.length > MAX_RECENT) HF.ai.recentLasers.shift();
-  }
   // 判断曲线描述是否为强大函数（三角/参数化）
   function isPowerfulDesc(desc) {
     if (desc.kind === 'param') return true;
@@ -341,7 +338,7 @@
     // === 局势判断 ===
     const danger = kingDanger(myPlayer);
     const myGuardCount = myPieces.filter(p => p.type === 'guard').length;
-    const enemyGuardCount = prob.aliveCount;
+    const enemyGuardCount = Math.max(0, prob.aliveCount - 1);  // 敌方护卫数 = 存活数 - 王
     const isLateGame = myGuardCount <= 2 || enemyGuardCount <= 2;
     const isWinning = myGuardCount > enemyGuardCount;
     const myBlock = st.difficulty === 2 ? st.mandatoryBlocks[myPlayer] : null;
@@ -439,15 +436,13 @@
         for (const desc of descs) {
           const r = buildCurveSimple(desc);
           if (!r.ok) continue;
-          if (isPowerfulDesc(desc) && st.powerfulLaserCredits <= 0) continue;
+          if (isPowerfulDesc(desc) && st.powerfulLaserCredits[myPlayer] <= 0) continue;
           const dist = HF.anchorDistance(r.curve, anchor.x, anchor.y);
           if (dist >= 0.5) continue;
-          // 强制方块检查
+          // 强制方块检查（硬过滤：不合规直接跳过，避免违规判负）
           const passesBlock = myBlock ? HF.checkMandatoryBlock(r.curve, myPlayer) : true;
-          let blockPenalty = 0;
-          if (myBlock && !passesBlock) blockPenalty = 2000;
+          if (myBlock && !passesBlock) continue;
           let score = expectedLaserScore(r.curve, { x: anchor.x, y: anchor.y }, anchor.id, myPlayer, prob);
-          score -= blockPenalty;
           // 避免误伤己方王
           if (myKing.id !== anchor.id) {
             const myResult = HF.generateLaser(r.curve, { x: anchor.x, y: anchor.y }, [myKing], anchor.id, true);
@@ -593,7 +588,7 @@
     }
 
     // 类人：无强力额度且当前行动收益不高时，跳过回合积攒额度（残局更倾向跳过）
-    if (st.powerfulLaserCredits <= 0 && bestScore < 8) {
+    if (st.powerfulLaserCredits[myPlayer] <= 0 && bestScore < 8) {
       const skipChance = isLateGame ? 0.45 : 0.2;
       if (Math.random() < skipChance) {
         return { type: 'skip' };

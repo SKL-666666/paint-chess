@@ -146,6 +146,7 @@
       el.innerHTML = `<span class="preset-name">当前: ${cur.name}</span><span class="preset-switch-hint">点击切换</span>`;
       el.addEventListener('click', () => {
         activePresetIdx = -1;
+        st.previewLaser = null;
         renderPresetControls();
       });
       list.appendChild(el);
@@ -235,7 +236,8 @@
     st.previewLaser = { points: result.points };
     if (dist < 0.5) {
       const powerful = isPowerfulFunction(activePresetIdx, r.label, desc);
-      const tag = powerful ? (st.powerfulLaserCredits > 0 ? ` [强力 额度${st.powerfulLaserCredits}]` : ` [强力无额度·可跳过获取]`) : ' [简单 无限]';
+      const credits = st.powerfulLaserCredits[st.turn];
+      const tag = powerful ? (credits > 0 ? ` [强力 额度${credits}]` : ` [强力无额度·可跳过获取]`) : ' [简单 无限]';
       flashHint('预览：' + r.label + ' ✓' + tag);
     } else {
       flashHint('预览：' + r.label + ' (距锚点' + dist.toFixed(2) + '，需<0.5)');
@@ -295,8 +297,8 @@
         const b = st.mandatoryBlocks[st.turn];
         info += ` · 必经(${b.x},${b.y})`;
       }
-      // 强力函数额度提示（初始0，跳过回合获得1次）
-      info += ` · 强力额度${st.powerfulLaserCredits}`;
+      // 强力函数额度提示（按玩家区分，初始0，跳过回合获得1次）
+      info += ` · 强力额度${st.powerfulLaserCredits[st.turn]}`;
       $('info').textContent = info;
       setActionMode(st.actionMode);
     }
@@ -350,8 +352,10 @@
     const st = HF.state;
     // 联机 B 等待障碍物时，禁用按钮
     if (st.handoffReason === 'setup-B-wait-obstacles' || st.handoffReason === 'net-wait-B') {
+      $('btn-ready').disabled = true;
       return;
     }
+    $('btn-ready').disabled = false;
     if (st.handoffReason === 'setup-A' || st.handoffReason === 'setup-B') {
       st.phase = 'setup';
       st.setupPlayer = st.handoffReason === 'setup-A' ? 'A' : 'B';
@@ -607,6 +611,8 @@
     // 强制方块失败通知：对手激光未经过方块，对手判负
     if (action.type === 'mandatory_fail') {
       st.busy = false;
+      st.currentLaser = null;  // 清理残留激光动画
+      st.previewLaser = null;
       HF.mandatoryFail(action.loser);
       showResult();
       return;
@@ -662,7 +668,7 @@
       }
     } else if (action.type === 'skip') {
       st.busy = true;
-      st.powerfulLaserCredits++;
+      st.powerfulLaserCredits[st.turn]++;
       showMsg('对手跳过回合 · 强力额度+1');
       setTimeout(() => {
         st.busy = false;
@@ -676,6 +682,10 @@
       // 重建 curve
       const r = buildCurveSimpleLocal(action.desc);
       if (!r.ok) { nextTurnHandoffNet(); return; }
+      // 对手发射强力函数时扣减对手额度（保持双方同步）
+      if (isPowerfulFunction(-1, action.desc.label || '', action.desc)) {
+        st.powerfulLaserCredits[st.turn] = Math.max(0, st.powerfulLaserCredits[st.turn] - 1);
+      }
       const allPieces = st.players.A.pieces.concat(st.players.B.pieces);
       const result = HF.generateLaser(r.curve, { x: anchor.x, y: anchor.y }, allPieces, anchor.id);
       st.currentLaser = { points: result.points, hits: result.hits, startTime: performance.now() };
@@ -817,7 +827,8 @@
     }
 
     // 陷阱模式：选中棋子 + 点击相邻格 → 埋陷阱
-    if (st.actionMode === 'trap' && sel) {
+    if (st.actionMode === 'trap') {
+      if (!sel) { flashHint('请先点击己方棋子选择锚点'); return; }
       const dx = w.x - sel.x, dy = w.y - sel.y;
       const adx = Math.abs(dx), ady = Math.abs(dy);
       const isAdjacent = (adx === ady || adx === 0 || ady === 0) && Math.max(adx, ady) === 1;
@@ -838,6 +849,7 @@
         executeMove(sel, dx, dy);
         return;
       }
+      flashHint('移动须为8方向1-2步直线');
       st.selectedPieceId = null;
       st.previewLaser = null;
       $('laser-hint').textContent = '';
@@ -881,12 +893,12 @@
     st.busy = true;
     st.selectedPieceId = null;
     st.previewLaser = null;
-    st.powerfulLaserCredits++;
+    st.powerfulLaserCredits[st.turn]++;
     // 联机模式广播
     if (st.mode === 'net') {
       HF.net.sendAction({ type: 'skip' });
     }
-    showMsg(`跳过本回合 · 强力额度+1（当前 ${st.powerfulLaserCredits}）`);
+    showMsg(`跳过本回合 · 强力额度+1（当前 ${st.powerfulLaserCredits[st.turn]}）`);
     setTimeout(() => {
       st.busy = false;
       clearMsg();
@@ -947,14 +959,14 @@
 
     // 强力函数额度限制：三角/参数化曲线需消耗1额度，简单函数无限制
     const isPowerful = isPowerfulFunction(activePresetIdx, label, desc);
-    if (isPowerful && st.powerfulLaserCredits <= 0) {
+    if (isPowerful && st.powerfulLaserCredits[st.turn] <= 0) {
       flashHint(`强力函数无额度，请跳过本回合获取（或使用简单函数/移动/陷阱）`);
       return;
     }
 
     st.busy = true;
     st.previewLaser = null;
-    if (isPowerful) st.powerfulLaserCredits--;
+    if (isPowerful) st.powerfulLaserCredits[st.turn]--;
     // 联机模式广播（包含曲线描述供对手重放）
     if (st.mode === 'net') {
       HF.net.sendAction({ type: 'laser', pieceId: anchor.id, desc: desc });
@@ -1019,9 +1031,9 @@
   function nextTurnHandoff() {
     const st = HF.state;
     HF.endTurn();
-    refreshMandatoryBlockForCurrentTurn();
     // AI 模式下，AI 回合跳过交接屏，延迟后自动执行
     if (st.mode === 'ai' && st.turn === 'B') {
+      refreshMandatoryBlockForCurrentTurn();
       st.phase = 'play';
       showGameArea(true);
       hideOverlays();
@@ -1032,6 +1044,7 @@
       setTimeout(() => { clearMsg(); runAITurn(); }, thinkTime);
     } else if (st.mode === 'ai' && st.turn === 'A') {
       // 人机模式回到玩家 A 回合，无需交接屏
+      refreshMandatoryBlockForCurrentTurn();
       st.phase = 'play';
       showGameArea(true);
       hideOverlays();
@@ -1064,8 +1077,8 @@
   function executeAISkip() {
     const st = HF.state;
     st.busy = true;
-    st.powerfulLaserCredits++;
-    showMsg(`AI 跳过回合 · 强力额度+1（当前 ${st.powerfulLaserCredits}）`);
+    st.powerfulLaserCredits[st.turn]++;
+    showMsg(`AI 跳过回合 · 强力额度+1（当前 ${st.powerfulLaserCredits[st.turn]}）`);
     setTimeout(() => {
       st.busy = false;
       clearMsg();
@@ -1112,8 +1125,10 @@
     const anchor = st.players.B.pieces.find(p => p.id === action.pieceId && p.alive);
     if (!anchor) { nextTurnHandoff(); return; }
     st.busy = true;
-    // 强力函数消耗额度（AI 发射强力函数时，扣减 AI 的额度）
-    if (action.label && /sin|cos|tan|tanh/.test(action.label)) st.powerfulLaserCredits = Math.max(0, st.powerfulLaserCredits - 1);
+    // 强力函数消耗AI额度（统一用 isPowerfulFunction 判定）
+    if (isPowerfulFunction(-1, action.label || '', { kind: 'explicit', expr: action.label || '' })) {
+      st.powerfulLaserCredits['B'] = Math.max(0, st.powerfulLaserCredits['B'] - 1);
+    }
     // 记录 AI 用过的曲线标签，避免重复
     if (action.label && HF.ai && HF.ai.recentLasers) {
       HF.ai.recentLasers.push(action.label);
