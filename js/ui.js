@@ -993,7 +993,7 @@
     const res = HF.placeTrap('B', action.x, action.y);
     if (!res.ok) { nextTurnHandoff(); return; }
     st.busy = true;
-    showMsg(`AI 埋设陷阱 @(${action.x},${action.y})`);
+    showMsg('AI 埋设了陷阱');
     setTimeout(() => {
       st.busy = false;
       clearMsg();
